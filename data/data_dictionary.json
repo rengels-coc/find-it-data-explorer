@@ -1,0 +1,204 @@
+{
+  "dataset_name": "Find It Cambridge Published Programs",
+  "source_file": "find-it-programs-export_2026-05-31.csv",
+  "source_export_date": "2026-05-31",
+  "prepared_date": "2026-06-01",
+  "record_count": 712,
+  "source_record_count": 1327,
+  "filters": [
+    "Status equals 'Published'"
+  ],
+  "dropped_source_fields": [
+    {
+      "field": "Services/Categories",
+      "reason": "Deprecated tag field per email context; use Services (2023) instead."
+    },
+    {
+      "field": "Activities",
+      "reason": "Deprecated tag field per email context; use Services (2023) instead."
+    }
+  ],
+  "transformations": [
+    "Decoded common HTML entities and normalized whitespace in text fields.",
+    "Rewrote program_url host from findit-dev.ddev.site to www.finditcambridge.org while preserving each page path.",
+    "Split Registration URL into registration_web_url and registration_link_text.",
+    "Deduplicated repeated semicolon-delimited taxonomy/list values while preserving source order.",
+    "Sorted rows by organization, title, and program_id for stable display."
+  ],
+  "columns": [
+    {
+      "field_name": "program_id",
+      "display_name": "Program ID",
+      "socrata_type": "text",
+      "description": "Unique Find It Cambridge source node identifier for the program page. Stored as text because it is an identifier, not a numeric measure."
+    },
+    {
+      "field_name": "title",
+      "display_name": "Title",
+      "socrata_type": "text",
+      "description": "Program page title displayed on Find It Cambridge."
+    },
+    {
+      "field_name": "program_url",
+      "display_name": "Program URL",
+      "socrata_type": "url",
+      "description": "Public URL for the Find It Cambridge page. The source export used a local development host; only the host was rewritten."
+    },
+    {
+      "field_name": "source_status",
+      "display_name": "Source Status",
+      "socrata_type": "text",
+      "description": "Publication status in the source export. This prototype includes only records whose source status is Published."
+    },
+    {
+      "field_name": "created_date",
+      "display_name": "Created Date",
+      "socrata_type": "calendar_date",
+      "description": "Date the program page was created in the source system, formatted as YYYY-MM-DD."
+    },
+    {
+      "field_name": "updated_date",
+      "display_name": "Updated Date",
+      "socrata_type": "calendar_date",
+      "description": "Date the program page was last updated in the source system, formatted as YYYY-MM-DD."
+    },
+    {
+      "field_name": "organization",
+      "display_name": "Organization",
+      "socrata_type": "text",
+      "description": "Organization associated with the program page."
+    },
+    {
+      "field_name": "locations",
+      "display_name": "Locations",
+      "socrata_type": "text",
+      "description": "Location information as provided by Find It Cambridge. Some programs list multiple locations or virtual-only details."
+    },
+    {
+      "field_name": "summary",
+      "display_name": "Summary",
+      "socrata_type": "text",
+      "description": "Short public summary of the program."
+    },
+    {
+      "field_name": "description",
+      "display_name": "Description",
+      "socrata_type": "text",
+      "description": "Longer public description of the program, with common HTML entities decoded for readability."
+    },
+    {
+      "field_name": "services",
+      "display_name": "Services",
+      "socrata_type": "text",
+      "description": "Current Find It Cambridge service/category tags from the Services (2023) source field; values are semicolon-delimited when multiple tags apply."
+    },
+    {
+      "field_name": "ages",
+      "display_name": "Ages",
+      "socrata_type": "text",
+      "description": "Age ranges served by the program; values are semicolon-delimited when multiple ages/ranges apply."
+    },
+    {
+      "field_name": "grades",
+      "display_name": "Grades",
+      "socrata_type": "text",
+      "description": "Grade levels served by the program; values are semicolon-delimited when multiple grades apply."
+    },
+    {
+      "field_name": "eligibility",
+      "display_name": "Eligibility",
+      "socrata_type": "text",
+      "description": "Eligibility notes or restrictions for the program."
+    },
+    {
+      "field_name": "cost_description",
+      "display_name": "Cost Description",
+      "socrata_type": "text",
+      "description": "Free-text cost information supplied by the program."
+    },
+    {
+      "field_name": "cost_subsidies",
+      "display_name": "Cost Subsidies",
+      "socrata_type": "text",
+      "description": "Cost or subsidy tags such as free, aid, vouchers, scale, or some; values are semicolon-delimited when multiple tags apply."
+    },
+    {
+      "field_name": "registration_type",
+      "display_name": "Registration Type",
+      "socrata_type": "text",
+      "description": "Registration mode from Find It Cambridge, such as registration, application, optional, or none."
+    },
+    {
+      "field_name": "registration_web_url",
+      "display_name": "Registration Web URL",
+      "socrata_type": "url",
+      "description": "Extracted web URL from the source registration link field when a web URL was present."
+    },
+    {
+      "field_name": "registration_link_text",
+      "display_name": "Registration Link Text",
+      "socrata_type": "text",
+      "description": "Human-readable registration link label or original non-web registration link text."
+    },
+    {
+      "field_name": "registration_notes",
+      "display_name": "Registration Notes",
+      "socrata_type": "text",
+      "description": "Additional registration instructions or notes."
+    },
+    {
+      "field_name": "program_timing",
+      "display_name": "Program Timing",
+      "socrata_type": "text",
+      "description": "Broad timing category from Find It Cambridge, such as ongoing, school, summer, or between."
+    },
+    {
+      "field_name": "days_of_week",
+      "display_name": "Days of Week",
+      "socrata_type": "text",
+      "description": "Days of week when the program is available; values are semicolon-delimited when multiple days apply."
+    },
+    {
+      "field_name": "times_of_day",
+      "display_name": "Times of Day",
+      "socrata_type": "text",
+      "description": "Times of day when the program is available; values are semicolon-delimited when multiple times apply."
+    },
+    {
+      "field_name": "schedule_notes",
+      "display_name": "Schedule Notes",
+      "socrata_type": "text",
+      "description": "Additional notes about schedule, seasonality, or timing."
+    },
+    {
+      "field_name": "virtual_option",
+      "display_name": "Virtual Option",
+      "socrata_type": "text",
+      "description": "Virtual availability value from Find It Cambridge. Values distinguish in-person/no virtual option, online, and online-only records where available."
+    },
+    {
+      "field_name": "transportation",
+      "display_name": "Transportation Provided",
+      "socrata_type": "text",
+      "description": "Transportation availability values from Find It Cambridge; values are semicolon-delimited when multiple options apply."
+    },
+    {
+      "field_name": "accessibility",
+      "display_name": "Accessibility",
+      "socrata_type": "text",
+      "description": "Accessibility, language, childcare, or refreshment accommodations listed for the program."
+    },
+    {
+      "field_name": "contacts",
+      "display_name": "Contacts",
+      "socrata_type": "text",
+      "description": "Public contact name or contact channel listed for the program."
+    },
+    {
+      "field_name": "contact_notes",
+      "display_name": "Contact Notes",
+      "socrata_type": "text",
+      "description": "Additional public contact notes."
+    }
+  ]
+}

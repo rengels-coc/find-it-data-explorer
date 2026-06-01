@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Find It Cambridge Data Explorer</title>
+    <meta
+      name="description"
+      content="Static visual explorer for the Find It Cambridge Socrata dataset snapshot."
+    >
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="site-header">
+      <div>
+        <p class="eyebrow">Find It Cambridge</p>
+        <h1>Program data explorer</h1>
+      </div>
+      <div class="dataset-meta" aria-live="polite">
+        <a id="datasetLink" href="https://data.cambridgema.gov/d/agus-pe2z">Socrata dataset</a>
+        <span id="snapshotDate">Loading snapshot</span>
+      </div>
+    </header>
+
+    <main class="app-shell">
+      <aside class="filter-panel" aria-label="Explorer filters">
+        <div class="filter-panel__header">
+          <h2>Filters</h2>
+          <button id="resetFilters" class="button button--secondary" type="button">Reset</button>
+        </div>
+
+        <label class="field">
+          <span>Search</span>
+          <input id="searchInput" type="search" placeholder="Title, organization, service, place">
+        </label>
+
+        <label class="field">
+          <span>Service</span>
+          <select id="serviceFilter"></select>
+        </label>
+
+        <label class="field">
+          <span>Age</span>
+          <select id="ageFilter"></select>
+        </label>
+
+        <label class="field">
+          <span>Timing</span>
+          <select id="timingFilter"></select>
+        </label>
+
+        <label class="field">
+          <span>Day</span>
+          <select id="dayFilter"></select>
+        </label>
+
+        <label class="field">
+          <span>Cost</span>
+          <select id="costFilter"></select>
+        </label>
+
+        <label class="field">
+          <span>Registration</span>
+          <select id="registrationFilter"></select>
+        </label>
+
+        <label class="field">
+          <span>Virtual</span>
+          <select id="virtualFilter"></select>
+        </label>
+
+        <label class="check-field">
+          <input id="accessibleOnly" type="checkbox">
+          <span>Has accessibility notes</span>
+        </label>
+
+        <label class="check-field">
+          <input id="registrationLinkOnly" type="checkbox">
+          <span>Has registration link</span>
+        </label>
+
+        <label class="field">
+          <span>Sort programs</span>
+          <select id="sortSelect">
+            <option value="updated_desc">Recently updated</option>
+            <option value="title_asc">Title A-Z</option>
+            <option value="organization_asc">Organization A-Z</option>
+          </select>
+        </label>
+
+        <div id="activeFilters" class="active-filters" aria-live="polite"></div>
+      </aside>
+
+      <section class="workspace">
+        <div id="loadStatus" class="status">Loading dataset snapshot...</div>
+
+        <section class="metric-grid" aria-label="Dataset summary">
+          <article class="metric">
+            <span class="metric__label">Programs</span>
+            <strong id="metricProgramCount">0</strong>
+          </article>
+          <article class="metric">
+            <span class="metric__label">Organizations</span>
+            <strong id="metricOrganizationCount">0</strong>
+          </article>
+          <article class="metric">
+            <span class="metric__label">Service tags</span>
+            <strong id="metricServiceCount">0</strong>
+          </article>
+          <article class="metric">
+            <span class="metric__label">Latest update</span>
+            <strong id="metricLatestUpdate">-</strong>
+          </article>
+        </section>
+
+        <nav class="tabs" aria-label="Explorer views">
+          <button class="tab is-active" type="button" data-view-button="overview">Overview</button>
+          <button class="tab" type="button" data-view-button="coverage">Coverage</button>
+          <button class="tab" type="button" data-view-button="programs">Programs</button>
+          <button class="tab" type="button" data-view-button="fields">Fields</button>
+        </nav>
+
+        <section id="overview" class="view is-active" data-view>
+          <div class="panel-grid panel-grid--two">
+            <article class="panel">
+              <div class="panel__header">
+                <h2>Services</h2>
+                <span id="serviceChartNote"></span>
+              </div>
+              <div id="serviceChart" class="bar-chart"></div>
+            </article>
+
+            <article class="panel">
+              <div class="panel__header">
+                <h2>Program timing</h2>
+              </div>
+              <div id="timingChart" class="bar-chart"></div>
+            </article>
+
+            <article class="panel">
+              <div class="panel__header">
+                <h2>Age reach</h2>
+              </div>
+              <div id="ageHeatmap" class="heatmap"></div>
+            </article>
+
+            <article class="panel">
+              <div class="panel__header">
+                <h2>Access modes</h2>
+              </div>
+              <div id="accessModeChart" class="bar-chart"></div>
+            </article>
+          </div>
+        </section>
+
+        <section id="coverage" class="view" data-view>
+          <div class="panel-grid panel-grid--two">
+            <article class="panel">
+              <div class="panel__header">
+                <h2>Day and time</h2>
+              </div>
+              <div id="dayTimeMatrix" class="matrix"></div>
+            </article>
+
+            <article class="panel">
+              <div class="panel__header">
+                <h2>Cost and registration</h2>
+              </div>
+              <div id="costRegistrationMatrix" class="matrix"></div>
+            </article>
+
+            <article class="panel">
+              <div class="panel__header">
+                <h2>Blank fields</h2>
+              </div>
+              <div id="blankFieldChart" class="bar-chart"></div>
+            </article>
+
+            <article class="panel panel--accent">
+              <div class="panel__header">
+                <h2>Team questions</h2>
+              </div>
+              <ul id="teamQuestions" class="question-list"></ul>
+            </article>
+          </div>
+        </section>
+
+        <section id="programs" class="view" data-view>
+          <div class="programs-toolbar">
+            <h2 id="resultSummary">Programs</h2>
+            <a class="button button--secondary" href="data/programs.json" download>Download JSON</a>
+          </div>
+          <div id="programList" class="program-list"></div>
+          <button id="loadMorePrograms" class="button load-more" type="button">Show more</button>
+        </section>
+
+        <section id="fields" class="view" data-view>
+          <div class="panel">
+            <div class="panel__header">
+              <h2>Data dictionary</h2>
+              <a class="button button--secondary" href="data/data_dictionary.json" download>Download dictionary</a>
+            </div>
+            <div id="metadataPanel" class="metadata-panel"></div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Field</th>
+                    <th>Display name</th>
+                    <th>Type</th>
+                    <th>Description</th>
+                  </tr>
+                </thead>
+                <tbody id="fieldTable"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
