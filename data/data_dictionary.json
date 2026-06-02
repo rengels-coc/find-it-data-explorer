@@ -2,27 +2,18 @@
   "dataset_name": "Find It Cambridge Published Programs",
   "source_file": "find-it-programs-export_2026-05-31.csv",
   "source_export_date": "2026-05-31",
-  "prepared_date": "2026-06-01",
+  "prepared_date": "2026-06-02",
   "record_count": 712,
   "source_record_count": 1327,
   "filters": [
     "Status equals 'Published'"
-  ],
-  "dropped_source_fields": [
-    {
-      "field": "Services/Categories",
-      "reason": "Deprecated tag field per email context; use Services (2023) instead."
-    },
-    {
-      "field": "Activities",
-      "reason": "Deprecated tag field per email context; use Services (2023) instead."
-    }
   ],
   "transformations": [
     "Decoded common HTML entities and normalized whitespace in text fields.",
     "Rewrote program_url host from findit-dev.ddev.site to www.finditcambridge.org while preserving each page path.",
     "Split Registration URL into registration_web_url and registration_link_text.",
     "Deduplicated repeated semicolon-delimited taxonomy/list values while preserving source order.",
+    "Added static geocoded latitude, longitude, point geometry, and Socrata region ids for map exploration.",
     "Sorted rows by organization, title, and program_id for stable display."
   ],
   "columns": [
@@ -199,6 +190,60 @@
       "display_name": "Contact Notes",
       "socrata_type": "text",
       "description": "Additional public contact notes."
+    },
+    {
+      "field_name": "location_latitude",
+      "display_name": "Location Latitude",
+      "socrata_type": "number",
+      "description": "Latitude returned by the geocoding source for the selected location segment. Blank when no location was supplied or no confident match was found."
+    },
+    {
+      "field_name": "location_longitude",
+      "display_name": "Location Longitude",
+      "socrata_type": "number",
+      "description": "Longitude returned by the geocoding source for the selected location segment. Blank when no location was supplied or no confident match was found."
+    },
+    {
+      "field_name": "location_point",
+      "display_name": "Location Point",
+      "socrata_type": "point",
+      "description": "Point geometry built from geocoded latitude and longitude for mapping. Blank when no location was supplied or no confident match was found. For multi-location rows, this is the first Census-matched segment unless geocode_status indicates a later segment."
+    },
+    {
+      "field_name": "geocode_status",
+      "display_name": "Geocode Status",
+      "socrata_type": "text",
+      "description": "Geocoding outcome: matched, matched_first_of_multiple, matched_later_segment, unmatched, or no_location."
+    },
+    {
+      "field_name": "geocode_source",
+      "display_name": "Geocode Source",
+      "socrata_type": "text",
+      "description": "Geocoding service and benchmark used to create the mapping fields."
+    },
+    {
+      "field_name": "geocode_query",
+      "display_name": "Geocode Query",
+      "socrata_type": "text",
+      "description": "Address text submitted to the geocoder, usually parsed from the first semicolon-delimited location segment."
+    },
+    {
+      "field_name": "geocode_match_address",
+      "display_name": "Geocode Match Address",
+      "socrata_type": "text",
+      "description": "Normalized address returned by the geocoding source for the selected match."
+    },
+    {
+      "field_name": "geocode_match_segment",
+      "display_name": "Geocode Match Segment",
+      "socrata_type": "number",
+      "description": "One-based position of the semicolon-delimited location segment that produced the geocode match."
+    },
+    {
+      "field_name": "geocode_match_count",
+      "display_name": "Geocode Match Count",
+      "socrata_type": "number",
+      "description": "Number of candidate matches returned by the geocoder for the selected geocode query."
     }
   ]
 }

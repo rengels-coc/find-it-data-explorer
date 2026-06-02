@@ -116,6 +116,8 @@
         <nav class="tabs" aria-label="Explorer views">
           <button class="tab is-active" type="button" data-view-button="overview">Overview</button>
           <button class="tab" type="button" data-view-button="coverage">Coverage</button>
+          <button class="tab" type="button" data-view-button="timeline">Timeline</button>
+          <button class="tab" type="button" data-view-button="map">Map</button>
           <button class="tab" type="button" data-view-button="programs">Programs</button>
           <button class="tab" type="button" data-view-button="fields">Fields</button>
         </nav>
@@ -181,6 +183,50 @@
                 <h2>Team questions</h2>
               </div>
               <ul id="teamQuestions" class="question-list"></ul>
+            </article>
+          </div>
+        </section>
+
+        <section id="timeline" class="view" data-view>
+          <div class="panel-grid panel-grid--two">
+            <article class="panel panel--wide">
+              <div class="panel__header">
+                <h2>Program timeline</h2>
+                <div class="segmented" aria-label="Timeline date field">
+                  <button class="segment is-active" type="button" data-timeline-field="updated_date">Updated</button>
+                  <button class="segment" type="button" data-timeline-field="created_date">Created</button>
+                </div>
+              </div>
+              <div id="timelineChart" class="timeline-chart"></div>
+            </article>
+
+            <article class="panel">
+              <div class="panel__header">
+                <h2>Recent records</h2>
+              </div>
+              <div id="timelineList" class="timeline-list"></div>
+            </article>
+          </div>
+        </section>
+
+        <section id="map" class="view" data-view>
+          <div class="panel-grid panel-grid--two">
+            <article class="panel panel--wide">
+              <div class="panel__header">
+                <h2>Program locations</h2>
+                <div class="segmented" aria-label="Map display mode">
+                  <button class="segment is-active" type="button" data-map-mode="points">Points</button>
+                  <button class="segment" type="button" data-map-mode="neighborhoods">Neighborhood heat</button>
+                </div>
+              </div>
+              <div id="mapCanvas" class="map-canvas"></div>
+            </article>
+
+            <article class="panel">
+              <div class="panel__header">
+                <h2>Map summary</h2>
+              </div>
+              <div id="mapSummary" class="map-summary"></div>
             </article>
           </div>
         </section>

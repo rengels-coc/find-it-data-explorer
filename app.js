@@ -3,7 +3,8 @@
 const DATA_PATHS = {
   programs: "data/programs.json",
   dictionary: "data/data_dictionary.json",
-  manifest: "data/manifest.json"
+  manifest: "data/manifest.json",
+  neighborhoods: "data/cambridge_neighborhoods.geojson"
 };
 
 const LIST_FIELDS = [
@@ -48,6 +49,9 @@ const TIMING_ORDER = ["ongoing", "school", "summer", "between", "(blank)"];
 const VIRTUAL_ORDER = ["false", "online", "online_only", "(blank)"];
 const COST_ORDER = ["free", "aid", "scale", "vouchers", "some", "(blank)"];
 const REGISTRATION_ORDER = ["registration", "application", "optional", "none", "(blank)"];
+const MAP_WIDTH = 900;
+const MAP_HEIGHT = 620;
+const MAP_PADDING = 28;
 
 const FRIENDLY = new Map([
   ["false", "In person"],
@@ -78,7 +82,8 @@ const state = {
   rows: [],
   dictionary: null,
   manifest: null,
-  socrata: null,
+  neighborhoods: null,
+  mapBounds: null,
   search: "",
   service: "all",
   age: "all",
@@ -91,6 +96,8 @@ const state = {
   registrationLinkOnly: false,
   sort: "updated_desc",
   view: "overview",
+  timelineField: "updated_date",
+  mapMode: "points",
   programLimit: 24
 };
 
@@ -103,15 +110,19 @@ async function init() {
   bindEvents();
 
   try {
-    const [programs, dictionary, manifest] = await Promise.all([
+    const [programs, dictionary, manifest, neighborhoods] = await Promise.all([
       fetchJson(DATA_PATHS.programs),
       fetchJson(DATA_PATHS.dictionary),
-      fetchJson(DATA_PATHS.manifest)
+      fetchJson(DATA_PATHS.manifest),
+      fetchJson(DATA_PATHS.neighborhoods)
     ]);
 
     state.rows = programs.map(normalizeRow);
     state.dictionary = dictionary;
     state.manifest = manifest;
+    state.neighborhoods = neighborhoods;
+    state.mapBounds = getGeoBounds(neighborhoods.features || []);
+    assignNeighborhoods();
 
     populateFilters();
     render();
@@ -156,6 +167,10 @@ function cacheElements() {
     "costRegistrationMatrix",
     "blankFieldChart",
     "teamQuestions",
+    "timelineChart",
+    "timelineList",
+    "mapCanvas",
+    "mapSummary",
     "resultSummary",
     "programList",
     "loadMorePrograms",
@@ -207,6 +222,8 @@ function bindEvents() {
       accessibleOnly: false,
       registrationLinkOnly: false,
       sort: "updated_desc",
+      timelineField: "updated_date",
+      mapMode: "points",
       programLimit: 24
     });
     syncControls();
@@ -217,6 +234,22 @@ function bindEvents() {
     button.addEventListener("click", () => {
       state.view = button.dataset.viewButton;
       renderTabs();
+    });
+  });
+
+  document.querySelectorAll("[data-timeline-field]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.timelineField = button.dataset.timelineField;
+      renderTimeline(getFilteredRows());
+      renderSegments();
+    });
+  });
+
+  document.querySelectorAll("[data-map-mode]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.mapMode = button.dataset.mapMode;
+      renderMap(getFilteredRows());
+      renderSegments();
     });
   });
 
@@ -265,6 +298,10 @@ function normalizeRow(row) {
     "program_timing",
     "schedule_notes",
     "virtual_option",
+    "geocode_status",
+    "geocode_source",
+    "geocode_query",
+    "geocode_match_address",
     "contacts",
     "contact_notes"
   ].forEach((field) => {
@@ -276,6 +313,17 @@ function normalizeRow(row) {
     normalized[`${field}List`] = splitList(normalized[field]);
   });
 
+  const pointCoords = Array.isArray(normalized.location_point?.coordinates)
+    ? normalized.location_point.coordinates
+    : [];
+  const pointLongitude = Number(pointCoords[0]);
+  const pointLatitude = Number(pointCoords[1]);
+  normalized.locationLatitude = Number(normalized.location_latitude) || pointLatitude || null;
+  normalized.locationLongitude = Number(normalized.location_longitude) || pointLongitude || null;
+  normalized.hasLocationPoint =
+    Number.isFinite(normalized.locationLatitude) && Number.isFinite(normalized.locationLongitude);
+  normalized.cambridgeNeighborhoodId = cleanText(normalized[":@computed_region_wfuz_phaj"]);
+
   normalized.searchText = [
     normalized.title,
     normalized.organization,
@@ -286,6 +334,7 @@ function normalizeRow(row) {
     normalized.ages,
     normalized.grades,
     normalized.program_timing,
+    normalized.geocode_match_address,
     normalized.contacts
   ]
     .join(" ")
@@ -373,6 +422,7 @@ function syncControls() {
   els.accessibleOnly.checked = state.accessibleOnly;
   els.registrationLinkOnly.checked = state.registrationLinkOnly;
   els.sortSelect.value = state.sort;
+  renderSegments();
 }
 
 function render() {
@@ -382,9 +432,12 @@ function render() {
   renderActiveFilters();
   renderOverview(filteredRows);
   renderCoverage(filteredRows);
+  renderTimeline(filteredRows);
+  renderMap(filteredRows);
   renderPrograms(filteredRows);
   renderFields();
   renderTabs();
+  renderSegments();
 }
 
 function renderHeader() {
@@ -705,6 +758,189 @@ function renderTeamQuestions(rows) {
   els.teamQuestions.innerHTML = questions.map((question) => `<li>${escapeHtml(question)}</li>`).join("");
 }
 
+function renderTimeline(rows) {
+  const field = state.timelineField;
+  const entries = rows
+    .map((row) => ({ row, date: parseDate(row[field]) }))
+    .filter((entry) => entry.date)
+    .sort((a, b) => a.date - b.date);
+
+  if (!entries.length) {
+    els.timelineChart.innerHTML = '<div class="empty-state">No dated records match the current filters.</div>';
+    els.timelineList.innerHTML = '<div class="empty-state">No dated records to list.</div>';
+    return;
+  }
+
+  const monthCounts = new Map();
+  entries.forEach(({ date }) => {
+    const key = monthKey(date);
+    monthCounts.set(key, (monthCounts.get(key) || 0) + 1);
+  });
+
+  const months = [...monthCounts.entries()].sort(([a], [b]) => a.localeCompare(b));
+  const max = Math.max(...months.map(([, count]) => count), 1);
+  els.timelineChart.innerHTML = months
+    .map(([key, count]) => {
+      const height = Math.max((count / max) * 220, 3);
+      return `
+        <div class="timeline-bar" title="${escapeHtml(monthLabel(key))}: ${formatNumber(count)}">
+          <span class="timeline-bar__fill" style="height:${height.toFixed(1)}px"></span>
+          <span class="timeline-bar__label">${escapeHtml(shortMonthLabel(key))}</span>
+        </div>
+      `;
+    })
+    .join("");
+
+  const recent = [...entries].sort((a, b) => b.date - a.date).slice(0, 10);
+  els.timelineList.innerHTML = recent
+    .map(({ row, date }) => {
+      const url = safeUrl(row.program_url);
+      const title = url
+        ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(row.title || "Untitled program")}</a>`
+        : escapeHtml(row.title || "Untitled program");
+      return `
+        <div class="summary-row">
+          <strong>${title}</strong>
+          <span>${escapeHtml(formatShortDate(date))}</span>
+        </div>
+      `;
+    })
+    .join("");
+}
+
+function renderMap(rows) {
+  const features = state.neighborhoods?.features || [];
+  if (!features.length || !state.mapBounds) {
+    els.mapCanvas.innerHTML = '<div class="empty-state">Neighborhood geography is unavailable.</div>';
+    els.mapSummary.innerHTML = "";
+    return;
+  }
+
+  const locationRows = rows.filter((row) => row.hasLocationPoint);
+  const counts = countNeighborhoods(locationRows);
+  const maxCount = Math.max(...Object.values(counts), 1);
+  const polygons = features.map((feature) => {
+    const name = feature.properties?.name || "Neighborhood";
+    const count = counts[name] || 0;
+    const fill = state.mapMode === "neighborhoods" ? heatFill(count, maxCount) : "#dfe9e5";
+    const className = state.mapMode === "neighborhoods" ? "map-neighborhood" : "map-neighborhood map-neighborhood--outline";
+    return `
+      <path class="${className}" d="${geometryToPath(feature.geometry)}" fill="${fill}">
+        <title>${escapeHtml(name)}: ${formatNumber(count)} mapped programs</title>
+      </path>
+    `;
+  });
+
+  const labels = features.map((feature) => {
+    const name = feature.properties?.name || "";
+    const center = featureCenter(feature);
+    return `<text class="map-label" x="${center.x.toFixed(1)}" y="${center.y.toFixed(1)}">${escapeHtml(shortNeighborhoodName(name))}</text>`;
+  });
+
+  const points =
+    state.mapMode === "points"
+      ? locationRows
+          .map((row) => {
+            const point = projectCoord([row.locationLongitude, row.locationLatitude]);
+            return `
+              <circle class="map-point" cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="4">
+                <title>${escapeHtml(row.title || "Untitled program")} - ${escapeHtml(row.organization || "Organization not listed")}</title>
+              </circle>
+            `;
+          })
+          .join("")
+      : "";
+
+  els.mapCanvas.innerHTML = `
+    <svg viewBox="0 0 ${MAP_WIDTH} ${MAP_HEIGHT}" role="img" aria-label="Cambridge program location map">
+      <rect width="${MAP_WIDTH}" height="${MAP_HEIGHT}" fill="#eef4f2"></rect>
+      <g>${polygons.join("")}</g>
+      <g>${points}</g>
+      <g>${labels.join("")}</g>
+    </svg>
+    ${renderMapLegend(locationRows.length, maxCount)}
+  `;
+
+  renderMapSummary(rows, locationRows, counts);
+}
+
+function renderMapLegend(mappedCount, maxCount) {
+  if (state.mapMode === "points") {
+    return `
+      <div class="map-legend">
+        <span class="legend-swatch" style="--swatch: var(--coral)"></span>
+        <span>${formatNumber(mappedCount)} mapped programs</span>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="map-legend">
+      <span>Fewer</span>
+      <span class="legend-swatch" style="--swatch: ${heatFill(1, maxCount)}"></span>
+      <span class="legend-swatch" style="--swatch: ${heatFill(Math.max(1, Math.floor(maxCount / 2)), maxCount)}"></span>
+      <span class="legend-swatch" style="--swatch: ${heatFill(maxCount, maxCount)}"></span>
+      <span>More</span>
+    </div>
+  `;
+}
+
+function renderMapSummary(rows, locationRows, counts) {
+  const unmapped = rows.length - locationRows.length;
+  const withoutNeighborhood = locationRows.filter((row) => !row.neighborhoodName).length;
+  const topNeighborhoods = Object.entries(counts)
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, 8);
+
+  const rowsHtml = [
+    ["Filtered programs", formatNumber(rows.length)],
+    ["Mapped points", formatNumber(locationRows.length)],
+    ["No point", formatNumber(unmapped)],
+    ["No neighborhood match", formatNumber(withoutNeighborhood)]
+  ]
+    .map(([label, value]) => summaryRow(label, value))
+    .join("");
+
+  const neighborhoodsHtml = topNeighborhoods.length
+    ? topNeighborhoods.map(([name, count]) => summaryRow(name, formatNumber(count))).join("")
+    : '<div class="empty-state">No neighborhood counts match the current filters.</div>';
+
+  els.mapSummary.innerHTML = `${rowsHtml}<h3>Top neighborhoods</h3>${neighborhoodsHtml}`;
+}
+
+function assignNeighborhoods() {
+  const features = state.neighborhoods?.features || [];
+  state.rows.forEach((row) => {
+    if (!row.hasLocationPoint) {
+      row.neighborhoodName = "";
+      return;
+    }
+
+    const feature = features.find((candidate) =>
+      pointInGeometry([row.locationLongitude, row.locationLatitude], candidate.geometry)
+    );
+    row.neighborhoodName = feature?.properties?.name || "";
+  });
+}
+
+function countNeighborhoods(rows) {
+  const counts = {};
+  rows.forEach((row) => {
+    if (!row.neighborhoodName) return;
+    counts[row.neighborhoodName] = (counts[row.neighborhoodName] || 0) + 1;
+  });
+  return counts;
+}
+
+function summaryRow(label, value) {
+  return `
+    <div class="summary-row">
+      <strong>${escapeHtml(label)}</strong>
+      <span>${escapeHtml(value)}</span>
+    </div>
+  `;
+}
+
 function renderPrograms(rows) {
   els.resultSummary.textContent = `${formatNumber(rows.length)} program${rows.length === 1 ? "" : "s"}`;
 
@@ -831,6 +1067,138 @@ function renderTabs() {
   document.querySelectorAll("[data-view]").forEach((view) => {
     view.classList.toggle("is-active", view.id === state.view);
   });
+}
+
+function renderSegments() {
+  document.querySelectorAll("[data-timeline-field]").forEach((button) => {
+    button.classList.toggle("is-active", button.dataset.timelineField === state.timelineField);
+  });
+  document.querySelectorAll("[data-map-mode]").forEach((button) => {
+    button.classList.toggle("is-active", button.dataset.mapMode === state.mapMode);
+  });
+}
+
+function monthKey(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function monthLabel(key) {
+  const [year, month] = key.split("-").map(Number);
+  return new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric" }).format(new Date(year, month - 1, 1));
+}
+
+function shortMonthLabel(key) {
+  const [year, month] = key.split("-").map(Number);
+  return new Intl.DateTimeFormat("en-US", { month: "short", year: "2-digit" }).format(new Date(year, month - 1, 1));
+}
+
+function getGeoBounds(features) {
+  const coords = features.flatMap((feature) => geometryCoordinates(feature.geometry));
+  if (!coords.length) return null;
+  return coords.reduce(
+    (bounds, [lon, lat]) => ({
+      minLon: Math.min(bounds.minLon, lon),
+      maxLon: Math.max(bounds.maxLon, lon),
+      minLat: Math.min(bounds.minLat, lat),
+      maxLat: Math.max(bounds.maxLat, lat)
+    }),
+    { minLon: Infinity, maxLon: -Infinity, minLat: Infinity, maxLat: -Infinity }
+  );
+}
+
+function geometryCoordinates(geometry) {
+  if (!geometry) return [];
+  if (geometry.type === "Polygon") {
+    return geometry.coordinates.flat();
+  }
+  if (geometry.type === "MultiPolygon") {
+    return geometry.coordinates.flat(2);
+  }
+  return [];
+}
+
+function geometryToPath(geometry) {
+  if (!geometry) return "";
+  if (geometry.type === "Polygon") {
+    return polygonToPath(geometry.coordinates);
+  }
+  if (geometry.type === "MultiPolygon") {
+    return geometry.coordinates.map(polygonToPath).join(" ");
+  }
+  return "";
+}
+
+function polygonToPath(rings) {
+  return rings
+    .map((ring) => {
+      const commands = ring
+        .map((coord, index) => {
+          const point = projectCoord(coord);
+          return `${index === 0 ? "M" : "L"}${point.x.toFixed(1)},${point.y.toFixed(1)}`;
+        })
+        .join(" ");
+      return `${commands} Z`;
+    })
+    .join(" ");
+}
+
+function projectCoord([lon, lat]) {
+  const bounds = state.mapBounds;
+  const lonSpan = Math.max(bounds.maxLon - bounds.minLon, 0.000001);
+  const latSpan = Math.max(bounds.maxLat - bounds.minLat, 0.000001);
+  const x = MAP_PADDING + ((lon - bounds.minLon) / lonSpan) * (MAP_WIDTH - MAP_PADDING * 2);
+  const y = MAP_HEIGHT - MAP_PADDING - ((lat - bounds.minLat) / latSpan) * (MAP_HEIGHT - MAP_PADDING * 2);
+  return { x, y };
+}
+
+function featureCenter(feature) {
+  const coords = geometryCoordinates(feature.geometry);
+  if (!coords.length) return { x: MAP_WIDTH / 2, y: MAP_HEIGHT / 2 };
+  const center = coords.reduce(
+    (acc, [lon, lat]) => ({ lon: acc.lon + lon, lat: acc.lat + lat }),
+    { lon: 0, lat: 0 }
+  );
+  return projectCoord([center.lon / coords.length, center.lat / coords.length]);
+}
+
+function pointInGeometry(point, geometry) {
+  if (!geometry) return false;
+  if (geometry.type === "Polygon") return pointInPolygon(point, geometry.coordinates);
+  if (geometry.type === "MultiPolygon") {
+    return geometry.coordinates.some((polygon) => pointInPolygon(point, polygon));
+  }
+  return false;
+}
+
+function pointInPolygon(point, rings) {
+  if (!rings.length || !pointInRing(point, rings[0])) return false;
+  return !rings.slice(1).some((ring) => pointInRing(point, ring));
+}
+
+function pointInRing([x, y], ring) {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const xi = ring[i][0];
+    const yi = ring[i][1];
+    const xj = ring[j][0];
+    const yj = ring[j][1];
+    const intersects = yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi || 0.000001) + xi;
+    if (intersects) inside = !inside;
+  }
+  return inside;
+}
+
+function heatFill(count, maxCount) {
+  if (!count) return "#dfe9e5";
+  const ratio = Math.max(0.12, Math.min(1, count / Math.max(maxCount, 1)));
+  const start = [223, 238, 234];
+  const end = [0, 119, 122];
+  const color = start.map((value, index) => Math.round(value + (end[index] - value) * ratio));
+  return `rgb(${color[0]}, ${color[1]}, ${color[2]})`;
+}
+
+function shortNeighborhoodName(name) {
+  return name === "Neighborhood Nine" ? "Neighborhood 9" : name;
 }
 
 function countListValues(rows, listField) {
