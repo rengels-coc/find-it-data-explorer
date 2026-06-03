@@ -840,11 +840,22 @@ function renderMap(rows) {
   const points =
     state.mapMode === "points"
       ? locationRows
-          .map((row) => {
+          .map((row, index) => {
             const point = projectCoord([row.locationLongitude, row.locationLatitude]);
+            const label = mapPointTooltip(row);
+            const ariaLabel = label.replace(/\s*\n\s*/g, "; ");
             return `
-              <circle class="map-point" cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="4">
-                <title>${escapeHtml(row.title || "Untitled program")} - ${escapeHtml(row.organization || "Organization not listed")}</title>
+              <circle
+                class="map-point"
+                cx="${point.x.toFixed(1)}"
+                cy="${point.y.toFixed(1)}"
+                r="4"
+                tabindex="0"
+                role="button"
+                data-point-index="${index}"
+                aria-label="${escapeHtml(ariaLabel)}"
+              >
+                <title>${escapeHtml(label)}</title>
               </circle>
             `;
           })
@@ -862,6 +873,7 @@ function renderMap(rows) {
   `;
 
   renderMapSummary(rows, locationRows, counts);
+  bindMapPointEvents(locationRows);
 }
 
 function renderMapLegend(mappedCount, maxCount) {
@@ -905,7 +917,83 @@ function renderMapSummary(rows, locationRows, counts) {
     ? topNeighborhoods.map(([name, count]) => summaryRow(name, formatNumber(count))).join("")
     : '<div class="empty-state">No neighborhood counts match the current filters.</div>';
 
-  els.mapSummary.innerHTML = `${rowsHtml}<h3>Top neighborhoods</h3>${neighborhoodsHtml}`;
+  const pointDetails =
+    state.mapMode === "points"
+      ? `
+        <h3>Point detail</h3>
+        <div id="mapPointDetails" class="map-point-detail">${renderMapPointDetail()}</div>
+      `
+      : "";
+
+  els.mapSummary.innerHTML = `${rowsHtml}${pointDetails}<h3>Top neighborhoods</h3>${neighborhoodsHtml}`;
+}
+
+function bindMapPointEvents(locationRows) {
+  if (state.mapMode !== "points") return;
+  els.mapCanvas.querySelectorAll(".map-point").forEach((point) => {
+    const row = locationRows[Number(point.dataset.pointIndex)];
+    if (!row) return;
+    ["mouseenter", "focus", "click"].forEach((eventName) => {
+      point.addEventListener(eventName, () => showMapPointDetail(row, point));
+    });
+    point.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      showMapPointDetail(row, point);
+    });
+  });
+}
+
+function showMapPointDetail(row, point) {
+  const container = document.getElementById("mapPointDetails");
+  if (!container) return;
+  els.mapCanvas.querySelectorAll(".map-point.is-active").forEach((activePoint) => {
+    activePoint.classList.remove("is-active");
+  });
+  point.classList.add("is-active");
+  container.innerHTML = renderMapPointDetail(row);
+}
+
+function renderMapPointDetail(row = null) {
+  if (!row) {
+    return `
+      <div class="summary-row">
+        <strong>No mapped point selected</strong>
+        <span></span>
+      </div>
+    `;
+  }
+
+  const programUrl = safeUrl(row.program_url);
+  const title = programUrl
+    ? `<a href="${escapeHtml(programUrl)}" target="_blank" rel="noopener">${escapeHtml(row.title || "Untitled program")}</a>`
+    : escapeHtml(row.title || "Untitled program");
+  return `
+    <div class="map-point-card">
+      <h4>${title}</h4>
+      <dl>
+        <div>
+          <dt>Original location</dt>
+          <dd>${escapeHtml(row.locations || "Not listed")}</dd>
+        </div>
+        <div>
+          <dt>Organization</dt>
+          <dd>${escapeHtml(row.organization || "Not listed")}</dd>
+        </div>
+        <div>
+          <dt>Geocode match</dt>
+          <dd>${escapeHtml(row.geocode_match_address || "Not listed")}</dd>
+        </div>
+      </dl>
+    </div>
+  `;
+}
+
+function mapPointTooltip(row) {
+  return [
+    row.title || "Untitled program",
+    `Original location: ${row.locations || "Not listed"}`
+  ].join("\n");
 }
 
 function assignNeighborhoods() {

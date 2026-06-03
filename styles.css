@@ -580,7 +580,16 @@ a:focus-visible {
   fill-opacity: 0.72;
   stroke: #ffffff;
   stroke-width: 1.3;
+  cursor: pointer;
   vector-effect: non-scaling-stroke;
+}
+
+.map-point:hover,
+.map-point:focus,
+.map-point.is-active {
+  fill-opacity: 1;
+  stroke: var(--ink);
+  stroke-width: 2.2;
 }
 
 .map-label {
@@ -610,6 +619,42 @@ a:focus-visible {
   height: 12px;
   border-radius: 999px;
   background: var(--swatch);
+}
+
+.map-point-detail {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-2);
+  padding: 10px;
+}
+
+.map-point-card h4 {
+  margin: 0 0 10px;
+  font-size: 0.98rem;
+  line-height: 1.25;
+}
+
+.map-point-card dl {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.map-point-card div {
+  border-top: 1px solid rgba(24, 35, 33, 0.1);
+  padding-top: 8px;
+}
+
+.map-point-card dt {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.map-point-card dd {
+  margin: 3px 0 0;
+  overflow-wrap: anywhere;
 }
 
 .question-list {
