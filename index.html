@@ -8,13 +8,22 @@
       name="description"
       content="Static visual explorer for the Find It Cambridge Socrata dataset snapshot."
     >
+    <link rel="preconnect" href="https://www.cambridgema.gov" crossorigin>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="assets/cambridge.css">
     <link rel="stylesheet" href="styles.css">
   </head>
-  <body>
+  <body class="coc">
+    <a class="skip-link" href="#explorer">Skip to explorer</a>
+    <div class="civic-bar">
+      <img src="assets/cambridge-logotype.svg" alt="City of Cambridge" width="170" height="32">
+      <span>Community programs</span>
+    </div>
     <header class="site-header">
       <div>
-        <p class="eyebrow">Find It Cambridge</p>
-        <h1>Program data explorer</h1>
+        <h1>Find It Cambridge</h1>
+        <p class="page-subtitle">Program data explorer</p>
       </div>
       <div class="dataset-meta" aria-live="polite">
         <a id="datasetLink" href="https://data.cambridgema.gov/d/agus-pe2z">Socrata dataset</a>
@@ -24,8 +33,9 @@
 
     <main class="app-shell">
       <aside class="filter-panel" aria-label="Explorer filters">
+        <details id="filterDisclosure" open>
+        <summary class="filter-summary">Filters</summary>
         <div class="filter-panel__header">
-          <h2>Filters</h2>
           <button id="resetFilters" class="button button--secondary" type="button">Reset</button>
         </div>
 
@@ -89,9 +99,10 @@
         </label>
 
         <div id="activeFilters" class="active-filters" aria-live="polite"></div>
+        </details>
       </aside>
 
-      <section class="workspace">
+      <section id="explorer" class="workspace" tabindex="-1">
         <div id="loadStatus" class="status">Loading dataset snapshot...</div>
 
         <section class="metric-grid" aria-label="Dataset summary">

@@ -76,7 +76,7 @@ const FRIENDLY = new Map([
   ["(blank)", "Not listed"]
 ]);
 
-const COLORS = ["#00777a", "#2b5f9e", "#c9533f", "#a66c00", "#347a45", "#6a5d9e"];
+const COLORS = ["#196CC6", "#FF6000", "#29BA38", "#FFB800", "#1D2F8D", "#EC1A88"];
 
 const state = {
   rows: [],
@@ -182,6 +182,13 @@ function cacheElements() {
 }
 
 function bindEvents() {
+  const compactLayout = window.matchMedia("(max-width: 1050px)");
+  const syncFilterDisclosure = () => {
+    document.getElementById("filterDisclosure").open = !compactLayout.matches;
+  };
+  syncFilterDisclosure();
+  compactLayout.addEventListener("change", syncFilterDisclosure);
+
   els.searchInput.addEventListener("input", () => {
     state.search = els.searchInput.value.trim().toLowerCase();
     resetProgramLimit();
@@ -533,7 +540,7 @@ function addChip(chips, label, value) {
 function renderOverview(rows) {
   const serviceCounts = countListValues(rows, "servicesList");
   const serviceEntries = topEntries(serviceCounts, 12, true);
-  els.serviceChartNote.textContent = `${formatNumber(Object.keys(serviceCounts).length)} shown in filter set`;
+  els.serviceChartNote.textContent = `Top ${formatNumber(serviceEntries.length)} services`;
   renderBarChart(els.serviceChart, serviceEntries, {
     color: COLORS[0],
     filterKey: "service",
@@ -822,7 +829,7 @@ function renderMap(rows) {
   const polygons = features.map((feature) => {
     const name = feature.properties?.name || "Neighborhood";
     const count = counts[name] || 0;
-    const fill = state.mapMode === "neighborhoods" ? heatFill(count, maxCount) : "#dfe9e5";
+    const fill = state.mapMode === "neighborhoods" ? heatFill(count, maxCount) : "#dce6ed";
     const className = state.mapMode === "neighborhoods" ? "map-neighborhood" : "map-neighborhood map-neighborhood--outline";
     return `
       <path class="${className}" d="${geometryToPath(feature.geometry)}" fill="${fill}">
@@ -864,7 +871,7 @@ function renderMap(rows) {
 
   els.mapCanvas.innerHTML = `
     <svg viewBox="0 0 ${MAP_WIDTH} ${MAP_HEIGHT}" role="img" aria-label="Cambridge program location map">
-      <rect width="${MAP_WIDTH}" height="${MAP_HEIGHT}" fill="#eef4f2"></rect>
+      <rect width="${MAP_WIDTH}" height="${MAP_HEIGHT}" fill="#f3f7fa"></rect>
       <g>${polygons.join("")}</g>
       <g>${points}</g>
       <g>${labels.join("")}</g>
@@ -1277,12 +1284,10 @@ function pointInRing([x, y], ring) {
 }
 
 function heatFill(count, maxCount) {
-  if (!count) return "#dfe9e5";
-  const ratio = Math.max(0.12, Math.min(1, count / Math.max(maxCount, 1)));
-  const start = [223, 238, 234];
-  const end = [0, 119, 122];
-  const color = start.map((value, index) => Math.round(value + (end[index] - value) * ratio));
-  return `rgb(${color[0]}, ${color[1]}, ${color[2]})`;
+  if (!count) return "#dce6ed";
+  const shades = ["#CDECFF", "#70CBF7", "#30B8FF", "#00A9FF", "#196CC6", "#1D2F8D"];
+  const index = Math.min(shades.length - 1, Math.ceil(count / Math.max(maxCount, 1) * shades.length) - 1);
+  return shades[index];
 }
 
 function shortNeighborhoodName(name) {
