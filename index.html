@@ -8,129 +8,150 @@
       name="description"
       content="Static visual explorer for the Find It Cambridge Socrata dataset snapshot."
     >
+    <meta name="theme-color" content="#2a0058">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;600;700;800&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;600;700&display=swap">
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
     <a class="skip-link" href="#explorer">Skip to explorer</a>
+
     <header class="site-header">
-      <div class="brand-heading">
+      <div class="container site-header__inner">
         <a class="brand-link" href="https://finditcambridge.org/" aria-label="Find It Cambridge home">
           <img src="assets/find-it-logo.svg" alt="Find It Cambridge" width="250" height="50">
         </a>
-        <h1>Program data explorer</h1>
-      </div>
-      <div class="dataset-meta" aria-live="polite">
-        <a id="datasetLink" href="https://data.cambridgema.gov/d/agus-pe2z">Socrata dataset</a>
-        <span id="snapshotDate">Loading snapshot</span>
+        <h1 class="site-title">Data Explorer</h1>
       </div>
     </header>
 
-    <main class="app-shell">
+    <section class="hero" aria-label="Dataset summary">
+      <div class="container hero__inner">
+        <p class="hero__lede">
+          Every program published to the Find It Cambridge dataset, in one place.
+          Set a filter and every chart, map, and list responds.
+        </p>
+        <div id="loadStatus" class="status">Loading programs...</div>
+        <div class="metric-grid">
+          <article class="metric">
+            <strong id="metricProgramCount">0</strong>
+            <span class="metric__label">Programs in view</span>
+          </article>
+          <article class="metric">
+            <strong id="metricOrganizationCount">0</strong>
+            <span class="metric__label">Organizations</span>
+          </article>
+          <article class="metric">
+            <strong id="metricServiceCount">0</strong>
+            <span class="metric__label">Service tags</span>
+          </article>
+          <article class="metric">
+            <strong id="metricLatestUpdate">-</strong>
+            <span class="metric__label">Latest update</span>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <nav class="view-nav" aria-label="Explorer views">
+      <div class="container tabs">
+        <button class="tab is-active" type="button" data-view-button="overview">Overview</button>
+        <button class="tab" type="button" data-view-button="coverage">Coverage</button>
+        <button class="tab" type="button" data-view-button="timeline">Timeline</button>
+        <button class="tab" type="button" data-view-button="map">Map</button>
+        <button class="tab" type="button" data-view-button="programs">Programs</button>
+        <button class="tab" type="button" data-view-button="organizations">Organizations</button>
+        <button class="tab" type="button" data-view-button="fields">Fields</button>
+      </div>
+    </nav>
+
+    <main class="container app-shell">
       <aside class="filter-panel" aria-label="Explorer filters">
         <details id="filterDisclosure" open>
-        <summary class="filter-summary">Filters</summary>
-        <div class="filter-panel__header">
-          <button id="resetFilters" class="button button--secondary" type="button">Reset</button>
-        </div>
+          <summary class="filter-summary">
+            <span>Filters</span>
+          </summary>
 
-        <label class="field">
-          <span>Search</span>
-          <input id="searchInput" type="search" placeholder="Title, organization, service, place">
-        </label>
+          <div class="filter-panel__body">
+            <div class="filter-panel__header">
+              <button id="resetFilters" class="button button--text" type="button">Reset</button>
+            </div>
 
-        <label class="field">
-          <span>Service</span>
-          <select id="serviceFilter"></select>
-        </label>
+            <label class="field field--search">
+              <span>Search</span>
+              <input id="searchInput" type="search" placeholder="Title, organization, service, place">
+            </label>
 
-        <label class="field">
-          <span>Age</span>
-          <select id="ageFilter"></select>
-        </label>
+            <div class="filter-group">
+              <h3 class="filter-group__title">Who and what</h3>
+              <label class="field">
+                <span>Service</span>
+                <select id="serviceFilter"></select>
+              </label>
+              <label class="field">
+                <span>Age</span>
+                <select id="ageFilter"></select>
+              </label>
+            </div>
 
-        <label class="field">
-          <span>Timing</span>
-          <select id="timingFilter"></select>
-        </label>
+            <div class="filter-group">
+              <h3 class="filter-group__title">When</h3>
+              <label class="field">
+                <span>Timing</span>
+                <select id="timingFilter"></select>
+              </label>
+              <label class="field">
+                <span>Day</span>
+                <select id="dayFilter"></select>
+              </label>
+            </div>
 
-        <label class="field">
-          <span>Day</span>
-          <select id="dayFilter"></select>
-        </label>
+            <div class="filter-group">
+              <h3 class="filter-group__title">How</h3>
+              <label class="field">
+                <span>Cost</span>
+                <select id="costFilter"></select>
+              </label>
+              <label class="field">
+                <span>Registration</span>
+                <select id="registrationFilter"></select>
+              </label>
+              <label class="field">
+                <span>Virtual</span>
+                <select id="virtualFilter"></select>
+              </label>
+              <label class="check-field">
+                <input id="accessibleOnly" type="checkbox">
+                <span>Has accessibility notes</span>
+              </label>
+              <label class="check-field">
+                <input id="registrationLinkOnly" type="checkbox">
+                <span>Has registration link</span>
+              </label>
+            </div>
 
-        <label class="field">
-          <span>Cost</span>
-          <select id="costFilter"></select>
-        </label>
+            <div class="filter-group">
+              <h3 class="filter-group__title">Order</h3>
+              <label class="field">
+                <span>Sort programs</span>
+                <select id="sortSelect">
+                  <option value="updated_desc">Recently updated</option>
+                  <option value="title_asc">Title A-Z</option>
+                  <option value="organization_asc">Organization A-Z</option>
+                </select>
+              </label>
+            </div>
 
-        <label class="field">
-          <span>Registration</span>
-          <select id="registrationFilter"></select>
-        </label>
-
-        <label class="field">
-          <span>Virtual</span>
-          <select id="virtualFilter"></select>
-        </label>
-
-        <label class="check-field">
-          <input id="accessibleOnly" type="checkbox">
-          <span>Has accessibility notes</span>
-        </label>
-
-        <label class="check-field">
-          <input id="registrationLinkOnly" type="checkbox">
-          <span>Has registration link</span>
-        </label>
-
-        <label class="field">
-          <span>Sort programs</span>
-          <select id="sortSelect">
-            <option value="updated_desc">Recently updated</option>
-            <option value="title_asc">Title A-Z</option>
-            <option value="organization_asc">Organization A-Z</option>
-          </select>
-        </label>
-
-        <div id="activeFilters" class="active-filters" aria-live="polite"></div>
+            <div class="filter-group filter-group--active">
+              <h3 class="filter-group__title">Active filters</h3>
+              <div id="activeFilters" class="active-filters" aria-live="polite"></div>
+            </div>
+          </div>
         </details>
       </aside>
 
       <section id="explorer" class="workspace" tabindex="-1">
-        <div id="loadStatus" class="status">Loading dataset snapshot...</div>
-
-        <section class="metric-grid" aria-label="Dataset summary">
-          <article class="metric">
-            <span class="metric__label">Programs</span>
-            <strong id="metricProgramCount">0</strong>
-          </article>
-          <article class="metric">
-            <span class="metric__label">Organizations</span>
-            <strong id="metricOrganizationCount">0</strong>
-          </article>
-          <article class="metric">
-            <span class="metric__label">Service tags</span>
-            <strong id="metricServiceCount">0</strong>
-          </article>
-          <article class="metric">
-            <span class="metric__label">Latest update</span>
-            <strong id="metricLatestUpdate">-</strong>
-          </article>
-        </section>
-
-        <nav class="tabs" aria-label="Explorer views">
-          <button class="tab is-active" type="button" data-view-button="overview">Overview</button>
-          <button class="tab" type="button" data-view-button="coverage">Coverage</button>
-          <button class="tab" type="button" data-view-button="timeline">Timeline</button>
-          <button class="tab" type="button" data-view-button="map">Map</button>
-          <button class="tab" type="button" data-view-button="programs">Programs</button>
-          <button class="tab" type="button" data-view-button="organizations">Organizations</button>
-          <button class="tab" type="button" data-view-button="fields">Fields</button>
-        </nav>
-
         <section id="overview" class="view is-active" data-view>
           <div class="panel-grid panel-grid--two">
             <article class="panel">
@@ -151,6 +172,7 @@
             <article class="panel">
               <div class="panel__header">
                 <h2>Age reach</h2>
+                <span>Programs by age group. Select a cell to filter.</span>
               </div>
               <div id="ageHeatmap" class="heatmap"></div>
             </article>
@@ -169,6 +191,7 @@
             <article class="panel">
               <div class="panel__header">
                 <h2>Day and time</h2>
+                <span>Programs by weekday and time of day</span>
               </div>
               <div id="dayTimeMatrix" class="matrix"></div>
             </article>
@@ -176,6 +199,7 @@
             <article class="panel">
               <div class="panel__header">
                 <h2>Cost and registration</h2>
+                <span>Programs by cost option and registration type</span>
               </div>
               <div id="costRegistrationMatrix" class="matrix"></div>
             </article>
@@ -183,13 +207,14 @@
             <article class="panel">
               <div class="panel__header">
                 <h2>Blank fields</h2>
+                <span>Programs missing a value</span>
               </div>
               <div id="blankFieldChart" class="bar-chart"></div>
             </article>
 
             <article class="panel panel--accent">
               <div class="panel__header">
-                <h2>Team questions</h2>
+                <h2>Questions for the team</h2>
               </div>
               <ul id="teamQuestions" class="question-list"></ul>
             </article>
@@ -219,8 +244,8 @@
         </section>
 
         <section id="map" class="view" data-view>
-          <div class="panel-grid panel-grid--two">
-            <article class="panel panel--wide">
+          <div class="panel-grid panel-grid--map">
+            <article class="panel panel--map">
               <div class="panel__header">
                 <h2>Program locations</h2>
                 <div class="segmented" aria-label="Map display mode">
@@ -246,13 +271,14 @@
             <a class="button button--secondary" href="data/programs.json" download>Download JSON</a>
           </div>
           <div id="programList" class="program-list"></div>
-          <button id="loadMorePrograms" class="button load-more" type="button">Show more</button>
+          <button id="loadMorePrograms" class="button button--secondary load-more" type="button">Show more</button>
         </section>
 
         <section id="organizations" class="view" data-view>
           <div class="programs-toolbar">
             <h2 id="organizationResultSummary">Organizations</h2>
-            <label class="organization-sort">Sort organizations
+            <label class="organization-sort">
+              <span>Sort by</span>
               <select id="organizationSort">
                 <option value="name">Name A-Z</option>
                 <option value="count">Most matching programs</option>
@@ -260,7 +286,7 @@
             </label>
           </div>
           <div id="organizationList" class="program-list"></div>
-          <button id="loadMoreOrganizations" class="button load-more" type="button">Show more</button>
+          <button id="loadMoreOrganizations" class="button button--secondary load-more" type="button">Show more</button>
         </section>
 
         <section id="fields" class="view" data-view>
@@ -288,7 +314,15 @@
       </section>
     </main>
 
-    <main id="recordPage" class="record-page" hidden tabindex="-1" aria-label="Record details"></main>
+    <main id="recordPage" class="container record-page" hidden tabindex="-1" aria-label="Record details"></main>
+
+    <footer class="site-footer">
+      <div class="container site-footer__inner">
+        <span>Built from Find It Cambridge program data. Not an official Find It Cambridge page.</span>
+        <a id="datasetLink" href="https://data.cambridgema.gov/d/agus-pe2z">Source dataset</a>
+        <a href="https://finditcambridge.org/">finditcambridge.org</a>
+      </div>
+    </footer>
 
     <script src="details.js"></script>
     <script src="app.js"></script>

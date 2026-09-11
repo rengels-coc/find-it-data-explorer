@@ -107,7 +107,9 @@ function renderRoute(moveFocus = true) {
   const [kind, id] = parts;
   const isList = parts.length === 1 && (!kind || EXPLORER_VIEWS.has(kind));
   shell.hidden = !isList;
+  document.querySelector(".hero").hidden = !isList;
   page.hidden = isList;
+  document.body.classList.toggle("is-record-page", !isList);
   document.querySelector(".skip-link").href = isList ? "#explorer" : "#recordPage";
   if (isList) {
     state.view = kind || "overview";
@@ -117,7 +119,7 @@ function renderRoute(moveFocus = true) {
     return;
   }
   let title = "Record not found";
-  let content = '<p>This record is not available in the current snapshot.</p>';
+  let content = '<h1 class="record-title">Record not found</h1><p>This record is not available.</p>';
   let list = "programs";
   if (kind === "programs" && parts.length === 2) {
     const row = state.rows.find(item => item.program_id === id);
@@ -133,12 +135,14 @@ function renderRoute(moveFocus = true) {
       content = renderFullOrganization(organization);
     }
   }
+  state.view = list;
+  renderTabs();
   document.title = `${title} | Find It Cambridge Data Explorer`;
   page.innerHTML = `<div class="record-toolbar">
       <a href="#/${list}">Back to ${list}</a>
       <div class="record-share"><span id="copyLinkStatus" role="status"></span><button class="button button--secondary" type="button" data-copy-record-link>Copy page link</button></div>
     </div>
-    <h1 class="record-title">${escapeHtml(title)}</h1>${content}`;
+    ${content}`;
   window.scrollTo(0, 0);
   if (moveFocus) page.focus({ preventScroll: true });
 }
@@ -163,20 +167,70 @@ function fullField(row, key) {
 }
 
 function renderFullProgram(row) {
-  const groups = [
-    ["About", ["summary", "description", "organization", "program_url"]],
-    ["Who it serves", ["services", "ages", "grades", "eligibility"]],
-    ["When and where", ["locations", "program_timing", "days_of_week", "times_of_day", "schedule_notes", "virtual_option"]],
-    ["Cost and registration", ["cost_description", "cost_subsidies", "registration_type", "registration_web_url", "registration_link_text", "registration_notes"]],
-    ["Access and contact", ["transportation", "accessibility", "contacts", "contact_notes"]],
-    ["Record and geocoding", ["program_id", "source_status", "created_date", "updated_date", "location_latitude", "location_longitude", "location_point", "geocode_status", "geocode_source", "geocode_query", "geocode_match_address", "geocode_match_segment", "geocode_match_count"]]
-  ];
-  const covered = new Set(groups.flatMap(([, fields]) => fields).concat("title"));
-  const sourceRow = state.sourceRows.get(row.program_id);
-  const extra = Object.keys(sourceRow).filter(key => !covered.has(key));
-  if (extra.length) groups.push(["Additional source fields", extra]);
-  return `<p class="record-meta">Program ${escapeHtml(row.program_id)} &middot; Updated ${escapeHtml(formatDataDate(row.updated_date) || "Not listed")}</p>
-    ${groups.map(([heading, fields]) => `<section class="record-section"><h2>${heading}</h2><dl class="record-fields">${fields.map(key => fullField(row, key)).join("")}</dl></section>`).join("")}`;
+  const registrationUrl = safeUrl(row.registration_web_url);
+  const sourceUrl = safeUrl(row.program_url);
+  const registrationTitle = { application: "Application required", registration: "Registration required", optional: "Registration optional", none: "No registration required" }[row.registration_type] || "Registration";
+  const signup = [
+    profileText(friendlyList(row.agesList), "Ages"),
+    profileText(friendlyList(row.gradesList), "Grades"),
+    profileText(row.eligibility)
+  ].join("") || '<p>Eligibility information is not listed.</p>';
+  const registration = profileAction(registrationUrl, row.registration_link_text || "Sign up") + profileText(row.registration_notes)
+    || '<p>Registration instructions are not listed.</p>';
+  const cost = profileText(row.cost_description) + profileText(friendlyList(row.cost_subsidiesList));
+  const location = profileText(friendly(row.virtual_option)) + profileText(row.locations)
+    + profileText(row.neighborhoodName, "Neighborhood") + profileText(friendlyList(row.transportationList), "Transportation");
+  const schedule = profileText(friendly(row.program_timing)) + profileText(friendlyList(row.days_of_weekList), "Days")
+    + profileText(friendlyList(row.times_of_dayList), "Times") + profileText(row.schedule_notes);
+  const related = state.rows.filter(candidate => candidate.program_id !== row.program_id
+    && candidate.organizationIds.some(id => row.organizationIds.includes(id))).sort((a, b) => a.title.localeCompare(b.title));
+  return `<div class="profile-layout">
+    <div class="profile-main">
+      <header class="profile-intro">
+        <h1 class="record-title">${escapeHtml(row.title || "Untitled program")}</h1>
+        <p class="profile-byline">By ${organizationLinks(row)}</p>
+        ${profileText(row.summary, "", "profile-lead")}
+      </header>
+      ${profileSection("Sign-up information", signup, "profile-signup")}
+      ${profileSection(registrationTitle, registration, "profile-registration")}
+      ${profileSection("Cost", cost || '<p>Cost information is not listed.</p>')}
+      ${profileSection("Location", location)}
+      ${profileSection("Dates and times", schedule)}
+      ${row.accessibility ? profileSection("Accessibility", profileText(friendlyList(row.accessibilityList))) : ""}
+      ${profileSection("Additional information", profileText(row.description) || '<p>No additional description is listed.</p>')}
+      ${renderRecordDisclosure(row)}
+    </div>
+    <aside class="profile-sidebar" aria-label="Program contact and services">
+      <section class="profile-contact">
+        ${row.cost_subsidiesList.includes("free") ? '<span class="profile-badge">Free</span>' : ""}
+        <h2>Contact</h2>
+        ${profileText(row.contacts || "Contact not listed", "", "profile-contact-name")}
+        ${profileText(row.contact_notes)}
+        <div class="profile-provider">${organizationLinks(row)}</div>
+        ${profileAction(sourceUrl, "View on Find It Cambridge")}
+      </section>
+      ${profileSection("Services", `<div class="chips">${row.servicesList.map(service => chip(service, "chip--teal")).join("") || "Not listed"}</div>`)}
+      <p class="record-meta">Last updated ${escapeHtml(formatDataDate(row.updated_date) || "date not listed")}.</p>
+    </aside>
+  </div>
+  ${related.length ? `<section class="profile-related"><h2>Related programs</h2><p>More from the organizations that brought you this program.</p><div class="profile-program-grid">${related.slice(0, 4).map(renderProgramCard).join("")}</div><p class="profile-all-programs">All programs from ${organizationLinks(row)}</p></section>` : ""}`;
+}
+
+function profileText(value, label = "", className = "") {
+  return value ? `<p class="profile-text ${className}">${label ? `<strong>${escapeHtml(label)}:</strong> ` : ""}${escapeHtml(value)}</p>` : "";
+}
+
+function profileAction(url, label) {
+  return url ? `<a class="button profile-action" href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(label)}</a>` : "";
+}
+
+function profileSection(title, content, className = "") {
+  return `<section class="profile-section ${className}"><h2>${escapeHtml(title)}</h2>${content}</section>`;
+}
+
+function renderRecordDisclosure(row) {
+  const keys = distinct(state.dictionary.columns.map(column => column.field_name).concat(Object.keys(state.sourceRows.get(row.program_id))));
+  return `<details class="record-source"><summary>Full record and geocoding details</summary><dl class="record-fields">${keys.map(key => fullField(row, key)).join("")}</dl></details>`;
 }
 
 function renderFullOrganization(organization) {
@@ -194,15 +248,24 @@ function renderFullOrganization(organization) {
     });
     return values.size ? `<ul class="associated-values">${[...values].map(([value, programs]) => `<li><p>${escapeHtml(value)}</p><div class="associated-programs">${programs.map(programLink).join("; ")}</div></li>`).join("")}</ul>` : '<p class="record-meta">Not listed in the associated programs.</p>';
   };
-  return `<p class="record-meta">${escapeHtml(organization.id)} &middot; ${formatNumber(rows.length)} programs in this snapshot</p>
-    <p class="record-provenance">This profile is assembled from associated program records, not a separate organization profile. Locations and contacts below belong to those programs. All associated programs are shown, regardless of explorer filters.</p>
-    <section class="record-section"><h2>Program coverage</h2><dl class="record-fields">
-      ${detail("Organization", organization.name)}
-      ${detail("Services across programs", services.join("; "))}
-      ${detail("Ages across programs", orderEntries(Object.fromEntries(ages.map(age => [age, 1])), AGE_ORDER).map(([age]) => age).join("; "))}
-      ${detail("Latest program update", updated ? formatShortDate(updated) : "")}
-    </dl></section>
-    <section class="record-section"><h2>Program locations</h2>${associatedValues(["locations"])}</section>
-    <section class="record-section"><h2>Program contacts</h2>${associatedValues(["contacts", "contact_notes"])}</section>
-    <section class="record-section"><h2>Programs (${formatNumber(rows.length)})</h2><div class="program-list">${rows.map(renderProgramCard).join("") || '<p>No programs in this snapshot.</p>'}</div></section>`;
+  return `<div class="profile-layout">
+    <div class="profile-main">
+      <header class="profile-intro"><h1 class="record-title">${escapeHtml(organization.name)}</h1>
+        <p class="profile-byline">${formatNumber(rows.length)} ${rows.length === 1 ? "program" : "programs"}</p>
+      </header>
+      <p class="record-provenance">Organization information is drawn from its program records. Locations and contacts belong to those programs. All associated programs are shown, regardless of explorer filters.</p>
+      ${profileSection("Program locations", associatedValues(["locations"]))}
+      ${profileSection("Program contacts", associatedValues(["contacts", "contact_notes"]))}
+    </div>
+    <aside class="profile-sidebar" aria-label="Organization program coverage">
+      <section class="profile-contact"><h2>Program coverage</h2>
+        <p class="profile-count">${formatNumber(rows.length)} <span>${rows.length === 1 ? "program" : "programs"}</span></p>
+        <dl class="profile-facts">${detail("Ages across programs", orderEntries(Object.fromEntries(ages.map(age => [age, 1])), AGE_ORDER).map(([age]) => age).join("; "))}</dl>
+      </section>
+      ${profileSection("Services across programs", `<div class="chips">${services.map(service => chip(service, "chip--teal")).join("") || "Not listed"}</div>`)}
+      <p class="record-meta">Latest program update: ${escapeHtml(updated ? formatShortDate(updated) : "Not listed")}.</p>
+      <p class="record-meta">Organization ID: ${escapeHtml(organization.id)}</p>
+    </aside>
+  </div>
+  <section class="profile-related"><h2>Programs (${formatNumber(rows.length)})</h2><div class="profile-program-grid">${rows.map(renderProgramCard).join("") || '<p>No programs listed.</p>'}</div></section>`;
 }

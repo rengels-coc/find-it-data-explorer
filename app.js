@@ -77,7 +77,7 @@ const FRIENDLY = new Map([
   ["(blank)", "Not listed"]
 ]);
 
-const COLORS = ["#4B009B", "#FF911C", "#478D00", "#3B5A98", "#A70C20", "#9470BC"];
+const COLORS = ["#4B009B", "#FF911C", "#3B5A98", "#9470BC", "#A70C20", "#478D00"];
 
 const state = {
   rows: [],
@@ -148,7 +148,6 @@ async function init() {
 function cacheElements() {
   [
     "datasetLink",
-    "snapshotDate",
     "loadStatus",
     "resetFilters",
     "searchInput",
@@ -467,8 +466,6 @@ function render() {
 function renderHeader() {
   if (!state.manifest) return;
   els.datasetLink.href = state.manifest.dataset_url || "https://data.cambridgema.gov/d/agus-pe2z";
-  const snapshot = formatDateTime(state.manifest.snapshot_generated_at);
-  els.snapshotDate.textContent = snapshot ? `Static snapshot: ${snapshot}` : "Static snapshot";
 }
 
 function getFilteredRows() {
