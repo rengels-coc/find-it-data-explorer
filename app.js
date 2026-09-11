@@ -2,6 +2,7 @@
 
 const DATA_PATHS = {
   programs: "data/programs.json",
+  organizations: "data/organizations.json",
   dictionary: "data/data_dictionary.json",
   manifest: "data/manifest.json",
   neighborhoods: "data/cambridge_neighborhoods.geojson"
@@ -80,6 +81,10 @@ const COLORS = ["#4B009B", "#FF911C", "#478D00", "#3B5A98", "#A70C20", "#9470BC"
 
 const state = {
   rows: [],
+  sourceRows: new Map(),
+  organizations: [],
+  organizationLimit: 24,
+  organizationSort: "name",
   dictionary: null,
   manifest: null,
   neighborhoods: null,
@@ -110,14 +115,17 @@ async function init() {
   bindEvents();
 
   try {
-    const [programs, dictionary, manifest, neighborhoods] = await Promise.all([
+    const [programs, dictionary, manifest, neighborhoods, organizationRegistry] = await Promise.all([
       fetchJson(DATA_PATHS.programs),
       fetchJson(DATA_PATHS.dictionary),
       fetchJson(DATA_PATHS.manifest),
-      fetchJson(DATA_PATHS.neighborhoods)
+      fetchJson(DATA_PATHS.neighborhoods),
+      fetchJson(DATA_PATHS.organizations)
     ]);
 
     state.rows = programs.map(normalizeRow);
+    state.sourceRows = new Map(programs.map(row => [String(row.program_id), row]));
+    initializeOrganizations(organizationRegistry.organizations);
     state.dictionary = dictionary;
     state.manifest = manifest;
     state.neighborhoods = neighborhoods;
@@ -127,6 +135,7 @@ async function init() {
     populateFilters();
     render();
     setStatus("");
+    renderRoute(false);
   } catch (error) {
     setStatus(
       "Could not load the static data files. Run this from a local web server or GitHub Pages so browser fetch can read data/*.json.",
@@ -231,7 +240,8 @@ function bindEvents() {
       sort: "updated_desc",
       timelineField: "updated_date",
       mapMode: "points",
-      programLimit: 24
+      programLimit: 24,
+      organizationLimit: 24
     });
     syncControls();
     render();
@@ -241,6 +251,7 @@ function bindEvents() {
     button.addEventListener("click", () => {
       state.view = button.dataset.viewButton;
       renderTabs();
+      window.location.hash = `/${state.view}`;
     });
   });
 
@@ -264,6 +275,7 @@ function bindEvents() {
     state.programLimit += 24;
     renderPrograms(getFilteredRows());
   });
+  bindDetailEvents();
 }
 
 function bindSelect(elementId, stateKey) {
@@ -284,6 +296,10 @@ async function fetchJson(path) {
 
 function normalizeRow(row) {
   const normalized = { ...row };
+  // Socrata URL cells can be objects rather than plain strings.
+  ["program_url", "registration_web_url"].forEach(field => {
+    normalized[field] = normalized[field]?.url ?? normalized[field];
+  });
 
   [
     "program_id",
@@ -442,6 +458,7 @@ function render() {
   renderTimeline(filteredRows);
   renderMap(filteredRows);
   renderPrograms(filteredRows);
+  renderOrganizations(filteredRows);
   renderFields();
   renderTabs();
   renderSegments();
@@ -501,7 +518,7 @@ function sortRows(rows) {
 }
 
 function renderMetrics(rows) {
-  const organizations = distinct(rows.map((row) => row.organization).filter(Boolean));
+  const organizations = distinct(rows.flatMap((row) => row.organizationIds));
   const services = distinct(flatten(rows.map((row) => row.servicesList)));
   const latestUpdate = rows.reduce((latest, row) => {
     if (!row.updatedAt) return latest;
@@ -801,10 +818,7 @@ function renderTimeline(rows) {
   const recent = [...entries].sort((a, b) => b.date - a.date).slice(0, 10);
   els.timelineList.innerHTML = recent
     .map(({ row, date }) => {
-      const url = safeUrl(row.program_url);
-      const title = url
-        ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(row.title || "Untitled program")}</a>`
-        : escapeHtml(row.title || "Untitled program");
+      const title = programLink(row);
       return `
         <div class="summary-row">
           <strong>${title}</strong>
@@ -971,10 +985,7 @@ function renderMapPointDetail(row = null) {
     `;
   }
 
-  const programUrl = safeUrl(row.program_url);
-  const title = programUrl
-    ? `<a href="${escapeHtml(programUrl)}" target="_blank" rel="noopener">${escapeHtml(row.title || "Untitled program")}</a>`
-    : escapeHtml(row.title || "Untitled program");
+  const title = programLink(row);
   return `
     <div class="map-point-card">
       <h4>${title}</h4>
@@ -985,7 +996,7 @@ function renderMapPointDetail(row = null) {
         </div>
         <div>
           <dt>Organization</dt>
-          <dd>${escapeHtml(row.organization || "Not listed")}</dd>
+          <dd>${organizationLinks(row)}</dd>
         </div>
         <div>
           <dt>Geocode match</dt>
@@ -1052,7 +1063,6 @@ function renderPrograms(rows) {
 }
 
 function renderProgramCard(row) {
-  const programUrl = safeUrl(row.program_url);
   const registrationUrl = safeUrl(row.registration_web_url);
   const services = row.servicesList.slice(0, 4).map((value) => chip(value, "chip--teal")).join("");
   const ages = row.agesList.slice(0, 5).map((value) => chip(value, "chip--blue")).join("");
@@ -1060,16 +1070,14 @@ function renderProgramCard(row) {
     .filter(Boolean)
     .map((value) => chip(friendly(value), "chip--coral"))
     .join("");
-  const title = programUrl
-    ? `<a href="${escapeHtml(programUrl)}" target="_blank" rel="noopener">${escapeHtml(row.title || "Untitled program")}</a>`
-    : escapeHtml(row.title || "Untitled program");
+  const title = programLink(row);
 
   return `
     <article class="program-card">
       <div class="program-card__top">
         <div>
           <h3>${title}</h3>
-          <p class="program-card__org">${escapeHtml(row.organization || "Organization not listed")}</p>
+          <p class="program-card__org">${organizationLinks(row)}</p>
         </div>
         <span class="program-card__date">${escapeHtml(formatDataDate(row.updated_date) || "No update date")}</span>
       </div>
@@ -1357,6 +1365,7 @@ function flatten(values) {
 
 function resetProgramLimit() {
   state.programLimit = 24;
+  state.organizationLimit = 24;
 }
 
 function safeUrl(url) {

@@ -127,6 +127,7 @@
           <button class="tab" type="button" data-view-button="timeline">Timeline</button>
           <button class="tab" type="button" data-view-button="map">Map</button>
           <button class="tab" type="button" data-view-button="programs">Programs</button>
+          <button class="tab" type="button" data-view-button="organizations">Organizations</button>
           <button class="tab" type="button" data-view-button="fields">Fields</button>
         </nav>
 
@@ -248,6 +249,20 @@
           <button id="loadMorePrograms" class="button load-more" type="button">Show more</button>
         </section>
 
+        <section id="organizations" class="view" data-view>
+          <div class="programs-toolbar">
+            <h2 id="organizationResultSummary">Organizations</h2>
+            <label class="organization-sort">Sort organizations
+              <select id="organizationSort">
+                <option value="name">Name A-Z</option>
+                <option value="count">Most matching programs</option>
+              </select>
+            </label>
+          </div>
+          <div id="organizationList" class="program-list"></div>
+          <button id="loadMoreOrganizations" class="button load-more" type="button">Show more</button>
+        </section>
+
         <section id="fields" class="view" data-view>
           <div class="panel">
             <div class="panel__header">
@@ -273,6 +288,9 @@
       </section>
     </main>
 
+    <main id="recordPage" class="record-page" hidden tabindex="-1" aria-label="Record details"></main>
+
+    <script src="details.js"></script>
     <script src="app.js"></script>
   </body>
 </html>

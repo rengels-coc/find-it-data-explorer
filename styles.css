@@ -25,6 +25,8 @@
   box-sizing: border-box;
 }
 
+[hidden] { display: none !important; }
+
 html {
   min-width: 320px;
 }
@@ -916,6 +918,29 @@ h3 { font-size: 1rem; line-height: 1.35; }
 .skip-link { position: absolute; top: -80px; left: 16px; z-index: 10; padding: 12px; background: white; }
 .skip-link:focus { top: 10px; }
 
+.organization-sort { display: grid; gap: 6px; font-size: 0.8125rem; color: var(--muted); }
+.organization-preview { margin: 14px 0 0; padding-left: 20px; font-size: 0.875rem; }
+.organization-preview li + li { margin-top: 6px; }
+.organization-card h3, .program-card h3 { overflow-wrap: anywhere; }
+.organization-card .program-card__top { flex-wrap: wrap; }
+.record-page { max-width: 1120px; margin: auto; padding: 28px 32px 60px; overflow-wrap: anywhere; }
+.record-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 28px; font-size: 0.875rem; }
+.record-share { display: flex; align-items: center; justify-content: flex-end; gap: 12px; min-width: 0; }
+.record-share button { flex-shrink: 0; }
+.record-title { font-size: 2rem; line-height: 1.25; color: var(--purple-dark); margin-bottom: 12px; }
+.record-meta { color: var(--muted); font-size: 0.875rem; }
+.record-provenance { font-size: 0.875rem; max-width: 850px; border-left: 3px solid var(--orange); padding-left: 14px; line-height: 1.6; }
+.record-section { border-top: 1px solid var(--line); margin-top: 28px; padding-top: 24px; }
+.record-section h2 { color: var(--purple-dark); margin-bottom: 20px; }
+.record-fields { margin: 0; }
+.record-fields > div { display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 24px; padding: 12px 0; border-bottom: 1px solid var(--surface-2); }
+.record-fields dt { font-size: 0.875rem; font-weight: 600; color: var(--muted); }
+.record-fields dd { margin: 0; white-space: pre-wrap; line-height: 1.65; }
+.associated-values { list-style: none; margin: 0; padding: 0; }
+.associated-values li { padding: 14px 0; border-bottom: 1px solid var(--surface-2); }
+.associated-values p { margin-bottom: 8px; }
+.associated-programs { font-size: 0.875rem; line-height: 1.7; }
+
 @media (min-width: 721px) {
   #overview .panel:nth-child(1) { grid-column: 1; grid-row: 1 / span 2; }
   #overview .panel:nth-child(2) { grid-column: 2; grid-row: 1; }
@@ -951,6 +976,10 @@ h3 { font-size: 1rem; line-height: 1.35; }
 }
 
 @media (max-width: 720px) {
+  .record-page { padding: 20px 20px 40px; }
+  .record-title { font-size: 1.5rem; }
+  .record-fields > div { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  .record-toolbar, .record-share, .programs-toolbar { flex-wrap: wrap; }
   .brand-heading { flex-direction: column; align-items: flex-start; gap: 14px; }
   .brand-link img { width: 230px; }
   .site-header h1 { padding: 0; border: 0; font-size: 1.125rem; }
