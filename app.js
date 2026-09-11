@@ -76,7 +76,7 @@ const FRIENDLY = new Map([
   ["(blank)", "Not listed"]
 ]);
 
-const COLORS = ["#196CC6", "#FF6000", "#29BA38", "#FFB800", "#1D2F8D", "#EC1A88"];
+const COLORS = ["#4B009B", "#FF911C", "#478D00", "#3B5A98", "#A70C20", "#9470BC"];
 
 const state = {
   rows: [],
@@ -829,7 +829,7 @@ function renderMap(rows) {
   const polygons = features.map((feature) => {
     const name = feature.properties?.name || "Neighborhood";
     const count = counts[name] || 0;
-    const fill = state.mapMode === "neighborhoods" ? heatFill(count, maxCount) : "#dce6ed";
+    const fill = state.mapMode === "neighborhoods" ? heatFill(count, maxCount) : "#e3dee9";
     const className = state.mapMode === "neighborhoods" ? "map-neighborhood" : "map-neighborhood map-neighborhood--outline";
     return `
       <path class="${className}" d="${geometryToPath(feature.geometry)}" fill="${fill}">
@@ -871,7 +871,7 @@ function renderMap(rows) {
 
   els.mapCanvas.innerHTML = `
     <svg viewBox="0 0 ${MAP_WIDTH} ${MAP_HEIGHT}" role="img" aria-label="Cambridge program location map">
-      <rect width="${MAP_WIDTH}" height="${MAP_HEIGHT}" fill="#f3f7fa"></rect>
+      <rect width="${MAP_WIDTH}" height="${MAP_HEIGHT}" fill="#f7f6f8"></rect>
       <g>${polygons.join("")}</g>
       <g>${points}</g>
       <g>${labels.join("")}</g>
@@ -1284,8 +1284,8 @@ function pointInRing([x, y], ring) {
 }
 
 function heatFill(count, maxCount) {
-  if (!count) return "#dce6ed";
-  const shades = ["#CDECFF", "#70CBF7", "#30B8FF", "#00A9FF", "#196CC6", "#1D2F8D"];
+  if (!count) return "#e3dee9";
+  const shades = ["#EEE8F5", "#D5C3E8", "#B598D3", "#9470BC", "#713EAA", "#4B009B"];
   const index = Math.min(shades.length - 1, Math.ceil(count / Math.max(maxCount, 1) * shades.length) - 1);
   return shades[index];
 }
